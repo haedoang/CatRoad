@@ -1,7 +1,8 @@
 {
   "colors" : [
     {
-      "idiom" : "universal"
+      "idiom" : "universal",
+      "platform" : "watchos"
     }
   ],
   "info" : {
