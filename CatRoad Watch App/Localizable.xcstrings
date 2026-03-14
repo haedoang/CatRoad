@@ -191,94 +191,94 @@
         }
       }
     },
-    "Move cat with\nDigital Crown" : {
+    "Spin the Crown\nto move your cat!" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Katze mit Digital Crown\nbewegen"
+            "value" : "Drehe die Krone,\num deine Katze zu bewegen!"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mover gato con\nCorona Digital"
+            "value" : "¡Gira la Corona\npara mover tu gato!"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Déplacer le chat avec\nla Couronne Numérique"
+            "value" : "Tournez la Couronne\npour bouger votre chat !"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "デジタルクラウンで\nネコを移動"
+            "value" : "クラウンを回して\nネコを動かそう!"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "디지털 크라운으로\n고양이 이동"
+            "value" : "크라운을 돌려서\n고양이를 움직여 봐요!"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mover gato com\nCoroa Digital"
+            "value" : "Gire a Coroa\npara mover seu gato!"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "用数字表冠\n移动猫咪"
+            "value" : "转动表冠\n来移动你的猫咪!"
           }
         }
       }
     },
-    "Restart" : {
+    "Play Again!" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Neustarten"
+            "value" : "Nochmal spielen!"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Reiniciar"
+            "value" : "¡Jugar de nuevo!"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Redémarrer"
+            "value" : "Rejouer !"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "再開"
+            "value" : "もう一度!"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "다시 시작"
+            "value" : "다시 도전!"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Reiniciar"
+            "value" : "Jogar Novamente!"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "重新开始"
+            "value" : "再来一次!"
           }
         }
       }
