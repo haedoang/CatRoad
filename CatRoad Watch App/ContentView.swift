@@ -57,7 +57,7 @@ struct StartView: View {
     @ObservedObject var gameManager: GameManager
     @Binding var crownValue: Double
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 8) {
             Text("CatRoad")
                 .font(.system(size: 18, weight: .bold))
                 .foregroundColor(Color.orange)
@@ -78,10 +78,11 @@ struct StartView: View {
                     .cornerRadius(8)
             }
             .buttonStyle(PlainButtonStyle())
-            Text("Move cat with\nDigital Crown")
+            Text("Spin the Crown\nto move your cat!")
                 .font(.system(size: 10))
                 .foregroundColor(.white.opacity(0.6))
                 .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }
@@ -94,143 +95,163 @@ struct GameView: View {
 
     var body: some View {
         GeometryReader { geometry in
-            let screenWidth = geometry.size.width
-            let screenHeight = geometry.size.height
-
-            let gameWorldWidth = screenWidth * 0.95
-            let gameWorldHeight = screenHeight * 0.85
-
-            let aspectRatio = 184.0 / 224.0
-            let calculatedWidth = gameWorldHeight * aspectRatio
-            let finalWidth = min(calculatedWidth, gameWorldWidth)
-            let finalHeight = finalWidth / aspectRatio
-
-            let pixelSize = finalWidth / 46.0
-
+            let layout = GameLayout(screenSize: geometry.size, virtualSize: gameManager.screenSize)
             ZStack {
-                // 흙 질감 배경
-                Canvas { context, size in
-                    context.fill(
-                        Path(CGRect(origin: .zero, size: size)),
-                        with: .color(Color(red: 44/255, green: 27/255, blue: 10/255))
-                    )
-                    let lineSpacing = pixelSize * 4
-                    for y in stride(from: lineSpacing, to: size.height, by: lineSpacing) {
-                        var path = Path()
-                        path.move(to: CGPoint(x: 0, y: y))
-                        path.addLine(to: CGPoint(x: size.width, y: y))
-                        context.stroke(
-                            path,
-                            with: .color(Color(red: 100/255, green: 65/255, blue: 28/255).opacity(0.10)),
-                            lineWidth: 1
-                        )
-                    }
-                    let dotSize = max(1.5, pixelSize * 0.4)
-                    let dotColors: [Color] = [
-                        Color(red: 75/255, green: 50/255, blue: 22/255).opacity(0.5),
-                        Color(red: 95/255, green: 62/255, blue: 26/255).opacity(0.35),
-                        Color(red: 60/255, green: 38/255, blue: 14/255).opacity(0.45),
-                    ]
-                    var rng = SeededRNG(seed: 42)
-                    for _ in 0..<120 {
-                        let x = rng.nextDouble() * size.width
-                        let y = rng.nextDouble() * size.height
-                        let colorIdx = Int(rng.nextDouble() * Double(dotColors.count))
-                        context.fill(
-                            Path(CGRect(x: x, y: y, width: dotSize, height: dotSize)),
-                            with: .color(dotColors[colorIdx])
-                        )
-                    }
-                }
-
-                // 게임 월드 (로컬 좌표계 사용)
-                ZStack {
-                    ForEach(gameManager.obstacles) { obstacle in
-                        PixelObstacle(pixelSize: pixelSize, pixels: obstacle.pixels)
-                            .frame(
-                                width: obstacle.size.width * (pixelSize / 4.0),
-                                height: obstacle.size.height * (pixelSize / 4.0)
-                            )
-                            .position(
-                                x: (obstacle.position.x / 184.0) * finalWidth,
-                                y: (obstacle.position.y / 224.0) * finalHeight
-                            )
-                    }
-
-                    PixelCat(
-                        pixelSize: pixelSize,
-                        pixels: walkFrame == 0 ? catPixelsStanding : catPixelsWalking
-                    )
-                    .frame(
-                        width: gameManager.cat.size.width * (pixelSize / 4.0),
-                        height: gameManager.cat.size.height * (pixelSize / 4.0)
-                    )
-                    .position(
-                        x: (gameManager.cat.position.x / 184.0) * finalWidth,
-                        y: (gameManager.cat.position.y / 224.0) * finalHeight
-                    )
-                }
-                .frame(width: finalWidth, height: finalHeight)
-                .offset(y: -5)
-
-                // 점수 표시 (트리플 탭 → Chaos Mode)
-                VStack {
-                    HStack {
-                        Text("\(gameManager.score)")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(
-                                gameManager.chaosMode
-                                    ? Color(red: 255/255, green: 50/255, blue: 50/255)
-                                    : Color.orange
-                            )
-                        if gameManager.chaosMode {
-                            Text("CHAOS")
-                                .font(.system(size: 11, weight: .heavy))
-                                .foregroundColor(Color(red: 255/255, green: 50/255, blue: 50/255))
-                        }
-                        Spacer()
-                    }
-                    .padding(8)
-                    .onTapGesture(count: 3) {
-                        gameManager.activateChaosMode()
-                    }
-                    Spacer()
-                }
-
-                // 게임오버 모달
+                GameBackgroundCanvas(pixelSize: layout.pixelSize)
+                gameWorldLayer(layout: layout)
+                scoreOverlay
                 if gameManager.gameOver {
                     GameOverView(score: gameManager.score, gameManager: gameManager, crownValue: $crownValue)
                 }
             }
-            .gesture(
-                DragGesture(minimumDistance: 10)
-                    .onChanged { value in
-                        if value.translation.height < 0 {
-                            gameManager.moveUp()
-                        } else if value.translation.height > 0 {
-                            gameManager.moveDown()
-                        }
-                    }
-            )
-            .onAppear {
-                walkTimer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: true) { _ in
-                    walkFrame = (walkFrame + 1) % 2
-                }
-            }
+            .gesture(dragGesture)
+            .onAppear { startWalkTimer() }
             .onChange(of: gameManager.gameOver) { isOver in
-                if isOver {
-                    walkTimer?.invalidate()
-                    walkTimer = nil
-                } else {
-                    walkTimer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: true) { _ in
-                        walkFrame = (walkFrame + 1) % 2
-                    }
+                isOver ? stopWalkTimer() : startWalkTimer()
+            }
+            .onDisappear { stopWalkTimer() }
+        }
+    }
+
+    private func gameWorldLayer(layout: GameLayout) -> some View {
+        ZStack {
+            ForEach(gameManager.obstacles) { obstacle in
+                PixelObstacle(pixelSize: layout.pixelSize, pixels: obstacle.pixels)
+                    .frame(
+                        width: obstacle.size.width * layout.scale,
+                        height: obstacle.size.height * layout.scale
+                    )
+                    .position(layout.screenPosition(of: obstacle.position))
+            }
+            PixelCat(
+                pixelSize: layout.pixelSize,
+                pixels: walkFrame == 0 ? catPixelsStanding : catPixelsWalking
+            )
+            .frame(
+                width: gameManager.cat.size.width * layout.scale,
+                height: gameManager.cat.size.height * layout.scale
+            )
+            .position(layout.screenPosition(of: gameManager.cat.position))
+        }
+        .frame(width: layout.finalWidth, height: layout.finalHeight)
+        .offset(y: -5)
+    }
+
+    private var scoreOverlay: some View {
+        VStack {
+            HStack {
+                Text("\(gameManager.score)")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(gameManager.chaosMode ? .red : .orange)
+                if gameManager.chaosMode {
+                    Text("CHAOS")
+                        .font(.system(size: 11, weight: .heavy))
+                        .foregroundColor(.red)
                 }
+                Spacer()
             }
-            .onDisappear {
-                walkTimer?.invalidate()
-                walkTimer = nil
+            .padding(8)
+            .onTapGesture(count: 3) { gameManager.activateChaosMode() }
+            Spacer()
+        }
+    }
+
+    private var dragGesture: some Gesture {
+        DragGesture(minimumDistance: 10)
+            .onChanged { value in
+                if value.translation.height < 0 { gameManager.moveUp() }
+                else if value.translation.height > 0 { gameManager.moveDown() }
             }
+    }
+
+    private func startWalkTimer() {
+        walkTimer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: true) { _ in
+            walkFrame = (walkFrame + 1) % 2
+        }
+    }
+
+    private func stopWalkTimer() {
+        walkTimer?.invalidate()
+        walkTimer = nil
+    }
+}
+
+// MARK: - GameLayout
+
+/// 가상 좌표(virtual) → 화면 좌표(screen) 변환을 담당하는 값 타입
+private struct GameLayout {
+    let finalWidth: CGFloat
+    let finalHeight: CGFloat
+    let pixelSize: CGFloat
+    private let virtualSize: CGSize
+
+    init(screenSize: CGSize, virtualSize: CGSize) {
+        self.virtualSize = virtualSize
+        let aspectRatio = virtualSize.width / virtualSize.height
+        let gameWorldWidth = screenSize.width * 0.95
+        let gameWorldHeight = screenSize.height * 0.85
+        let calculatedWidth = gameWorldHeight * aspectRatio
+        finalWidth = min(calculatedWidth, gameWorldWidth)
+        finalHeight = finalWidth / aspectRatio
+        pixelSize = finalWidth / 46.0
+    }
+
+    var scale: CGFloat { pixelSize / 4.0 }
+
+    func screenPosition(of virtualPoint: CGPoint) -> CGPoint {
+        CGPoint(
+            x: (virtualPoint.x / virtualSize.width) * finalWidth,
+            y: (virtualPoint.y / virtualSize.height) * finalHeight
+        )
+    }
+}
+
+// MARK: - GameBackgroundCanvas
+
+private struct GameBackgroundCanvas: View {
+    let pixelSize: CGFloat
+
+    var body: some View {
+        Canvas { context, size in
+            context.fill(
+                Path(CGRect(origin: .zero, size: size)),
+                with: .color(Color(red: 44/255, green: 27/255, blue: 10/255))
+            )
+            drawGridLines(context: context, size: size)
+            drawDots(context: context, size: size)
+        }
+    }
+
+    private func drawGridLines(context: GraphicsContext, size: CGSize) {
+        let lineSpacing = pixelSize * 4
+        for y in stride(from: lineSpacing, to: size.height, by: lineSpacing) {
+            var path = Path()
+            path.move(to: CGPoint(x: 0, y: y))
+            path.addLine(to: CGPoint(x: size.width, y: y))
+            context.stroke(
+                path,
+                with: .color(Color(red: 100/255, green: 65/255, blue: 28/255).opacity(0.10)),
+                lineWidth: 1
+            )
+        }
+    }
+
+    private func drawDots(context: GraphicsContext, size: CGSize) {
+        let dotSize = max(1.5, pixelSize * 0.4)
+        let dotColors: [Color] = [
+            Color(red: 75/255, green: 50/255, blue: 22/255).opacity(0.5),
+            Color(red: 95/255, green: 62/255, blue: 26/255).opacity(0.35),
+            Color(red: 60/255, green: 38/255, blue: 14/255).opacity(0.45),
+        ]
+        var rng = SeededRNG(seed: 42)
+        for _ in 0..<120 {
+            let x = rng.nextDouble() * size.width
+            let y = rng.nextDouble() * size.height
+            let colorIdx = Int(rng.nextDouble() * Double(dotColors.count))
+            context.fill(
+                Path(CGRect(x: x, y: y, width: dotSize, height: dotSize)),
+                with: .color(dotColors[colorIdx])
+            )
         }
     }
 }
@@ -253,7 +274,7 @@ struct GameOverView: View {
                     .foregroundColor(Color.orange)
             }
             Button(action: { crownValue = 50; gameManager.startGame() }) {
-                Text("Restart")
+                Text("Play Again!")
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundColor(.black)
                     .padding(.horizontal, 16)
