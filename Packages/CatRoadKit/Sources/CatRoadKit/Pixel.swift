@@ -117,7 +117,7 @@ public let rock: [Pixel] = [
 // 장애물: 버스 (12x6 그리드, 고난이도 전용)
 private let busBody = Color.orange
 private let busWindow = Color(red: 0.55, green: 0.82, blue: 1.0)
-private let busWheel = Color(red: 0.2, green: 0.2, blue: 0.2)
+private let busWheel = Color(red: 0.65, green: 0.65, blue: 0.65)
 private let busLight = Color.red
 
 public let bus: [Pixel] = [
