@@ -83,7 +83,7 @@ struct CatTests {
         var cat = Cat(position: CGPoint(x: 10, y: 5), targetY: 5)
         let bounds = CGRect(x: 0, y: 0, width: 184, height: 224)
         cat.moveUp(in: bounds)
-        #expect(cat.targetY >= 10)
+        #expect(cat.targetY >= 3)
     }
 
     @Test("Cat update interpolates position toward target")

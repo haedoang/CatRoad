@@ -21,9 +21,22 @@ public struct ObstacleFactory {
 
     private func makeObstacleAt(xOffset: CGFloat, score: Int) -> Obstacle {
         let definition = pickDefinition(score: score)
-        let yPositions: [CGFloat] = [190, 140, screenSize.height / 2 - 10, 50, 20]
+        let h = screenSize.height
+        // Cat의 정적 상수를 직접 참조 → 이동 범위와 자동 동기화
+        let catMinY = Cat.topMargin
+        let catMaxY = h - Cat.bottomClearance
+        let span = catMaxY - catMinY
+        let mid = catMinY + span * 0.5
+        let yPositions: [CGFloat] = [
+            catMinY,
+            catMinY + span * 0.25,
+            mid,
+            catMinY + span * 0.75,
+            catMaxY
+        ]
+        let spawnY = yPositions.randomElement() ?? mid
         return Obstacle(
-            position: CGPoint(x: screenSize.width + 80 + xOffset, y: yPositions.randomElement()!),
+            position: CGPoint(x: screenSize.width + 80 + xOffset, y: spawnY),
             size: definition.size,
             pixels: definition.pixels
         )
@@ -34,6 +47,6 @@ public struct ObstacleFactory {
         if score >= 100 && Int.random(in: 0..<4) == 0 {
             return busDefinition
         }
-        return obstacleDefinitions.randomElement()!
+        return obstacleDefinitions.randomElement() ?? obstacleDefinitions[0]
     }
 }

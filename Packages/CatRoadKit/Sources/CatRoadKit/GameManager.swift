@@ -21,18 +21,26 @@ public class GameManager: ObservableObject {
     private var spawnInterval: Int = 120
     private var gameLoopTask: Task<Void, Never>?
     private var scoreLoopTask: Task<Void, Never>?
-    public let screenSize = CGSize(width: 184, height: 224)
+    public let screenSize: CGSize
     private let engine: GameEngine
     private let factory: ObstacleFactory
     private let difficultySystem = DifficultySystem()
 
     public init() {
+        #if os(watchOS)
+        let rawHeight = WKInterfaceDevice.current().screenBounds.height
+        let deviceHeight: CGFloat = rawHeight > 0 ? rawHeight : 224
+        #else
+        let deviceHeight: CGFloat = 224
+        #endif
+        let vSize = CGSize(width: 184, height: deviceHeight)
+        screenSize = vSize
         cat = Cat(
-            position: CGPoint(x: 20, y: 224/2 - 16),
-            targetY: 224/2 - 16
+            position: CGPoint(x: 20, y: deviceHeight / 2 - 16),
+            targetY: deviceHeight / 2 - 16
         )
-        engine = GameEngine(screenSize: CGSize(width: 184, height: 224))
-        factory = ObstacleFactory(screenSize: CGSize(width: 184, height: 224))
+        engine = GameEngine(screenSize: vSize)
+        factory = ObstacleFactory(screenSize: vSize)
     }
 
     public func startGame() {
@@ -50,21 +58,23 @@ public class GameManager: ObservableObject {
         scoreLoopTask?.cancel()
 
         gameLoopTask = Task { @MainActor [weak self] in
-            while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: 16_666_667)
-                guard !Task.isCancelled, let self else { break }
-                self.update()
-            }
+            do {
+                while let self, !Task.isCancelled {
+                    try await Task.sleep(nanoseconds: 16_666_667)
+                    self.update()
+                }
+            } catch { /* Task 취소 시 정상 종료 */ }
         }
 
         scoreLoopTask = Task { @MainActor [weak self] in
-            while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: 1_000_000_000)
-                guard !Task.isCancelled, let self else { break }
-                guard self.gameStarted && !self.gameOver else { continue }
-                self.score += 1
-                self.updateDifficulty()
-            }
+            do {
+                while let self, !Task.isCancelled {
+                    try await Task.sleep(nanoseconds: 1_000_000_000)
+                    guard self.gameStarted && !self.gameOver else { continue }
+                    self.score += 1
+                    self.updateDifficulty()
+                }
+            } catch { /* Task 취소 시 정상 종료 */ }
         }
     }
 

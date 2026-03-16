@@ -20,3 +20,8 @@ ExportOptions.plist
 
 # Claude Code 세션 데이터
 .claude/
+
+# 로컬 개발 도구 설정
+.mcp.json
+skills-lock.json
+.agents/
